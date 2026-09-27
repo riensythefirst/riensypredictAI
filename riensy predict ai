@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SportyPredict Pro - AI Football Predictions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        sporty: {
+                            red: '#e90c25',
+                            dark: '#121212',
+                            gray: '#1e1e1e',
+                            light: '#2d2d2d',
+                            green: '#00e676'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            -webkit-font-smoothing: antialiased;
+        }
+        .prediction-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .prediction-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(233, 12, 37, 0.1), 0 8px 10px -6px rgba(233, 12, 37, 0.1);
+        }
+        .prob-bar-container {
+            width: 100%;
+            background-color: #374151; /* gray-700 */
+            border-radius: 9999px;
+            height: 0.5rem;
+            overflow: hidden;
+        }
+        .prob-bar {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 1s ease-out;
+        }
+        .loader {
+            border: 3px solid #2d2d2d;
+            border-bottom-color: #e90c25;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Modal Styles */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="font-sans antialiased bg-sporty-dark min-h-screen flex flex-col">
+
+    <nav class="bg-sporty-gray border-b border-sporty-light sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-2">
+                    <svg class="w-8 h-8 text-sporty-red" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+                    </svg>
+                    <span class="font-bold text-xl tracking-tight text-white">Sporty<span class="text-sporty-red">Predict</span> Pro</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#" class="bg-sporty-light text-white px-3 py-2 rounded-md text-sm font-medium">Predictions</a>
+                        <a href="#" class="text-gray-300 hover:bg-sporty-light hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors" onclick="showPremiumModal()">Premium (90%+)</a>
+                        <a href="#" class="text-gray-300 hover:bg-sporty-light hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Results</a>
+                    </div>
+                </div>
+                <div class="md:hidden flex items-center">
+                    <button class="text-gray-300 hover:text-white focus:outline-none">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <header class="bg-gradient-to-b from-sporty-gray to-sporty-dark py-12 border-b border-sporty-light">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-3xl md:text-5xl font-extrabold text-white mb-4">
+                AI-Powered <span class="text-transparent bg-clip-text bg-gradient-to-r from-sporty-red to-orange-500">Football Predictions</span>
+            </h1>
+            <p class="text-lg text-gray-400 max-w-2xl mx-auto mb-8">
+                Get data-driven insights, probabilities, and betting tips for major leagues. Our algorithm analyzes historical data, form, and stats to provide high-accuracy predictions.
+            </p>
+            <div class="flex justify-center gap-4">
+                <button onclick="generateNewPredictions()" class="bg-sporty-red hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors shadow-lg shadow-red-500/30 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Refresh Predictions
+                </button>
+                <button onclick="showPremiumModal()" class="bg-sporty-light hover:bg-gray-700 border border-gray-600 text-white font-bold py-3 px-6 rounded-lg transition-colors flex items-center gap-2">
+                    <svg class="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg>
+                    Unlock 90%+ Accuracy
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <!-- Filters -->
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+            <h2 class="text-2xl font-bold border-l-4 border-sporty-red pl-3">Today's Top Picks</h2>
+            <div class="flex bg-sporty-gray rounded-lg p-1 border border-sporty-light">
+                <button class="px-4 py-1.5 text-sm font-medium rounded-md bg-sporty-light text-white shadow">All Matches</button>
+                <button class="px-4 py-1.5 text-sm font-medium rounded-md text-gray-400 hover:text-white transition-colors">High Confidence</button>
+                <button class="px-4 py-1.5 text-sm font-medium rounded-md text-gray-400 hover:text-white transition-colors">Value Bets</button>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden flex-col items-center justify-center py-20">
+            <span class="loader w-12 h-12 mb-4"></span>
+            <p class="text-gray-400">Analyzing thousands of data points...</p>
+        </div>
+
+        <!-- Predictions Grid -->
+        <div id="predictionsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Prediction Cards will be injected here by JavaScript -->
+        </div>
+
+    </main>
+
+    <footer class="bg-sporty-gray border-t border-sporty-light py-8 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center gap-2 mb-4 md:mb-0">
+                <span class="font-bold text-lg text-white">Sporty<span class="text-sporty-red">Predict</span></span>
+            </div>
+            <p class="text-sm text-gray-500 text-center md:text-left">
+                Disclaimer: Predictions are based on historical data and algorithms. They do not guarantee winning. Please bet responsibly.
+            </p>
+            <div class="flex gap-4 mt-4 md:mt-0">
+                <a href="#" class="text-gray-400 hover:text-white text-sm">Terms</a>
+                <a href="#" class="text-gray-400 hover:text-white text-sm">Privacy</a>
+            </div>
+        </div>
+    </footer>
+
+    <div id="premiumModal" class="fixed inset-0 z-[100] hidden items-center justify-center">
+        <div class="modal-overlay absolute inset-0" onclick="closePremiumModal()"></div>
+        <div class="bg-sporty-gray border border-sporty-light rounded-2xl shadow-2xl z-10 max-w-md w-full mx-4 overflow-hidden transform transition-all">
+            <div class="p-6 relative">
+                <button onclick="closePremiumModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+                <div class="text-center mb-6">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-500/20 text-yellow-500 mb-4">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1a1 1 0 010 2H6v1a1 1 0 01-2 0V6H3a1 1 0 010-2h1V3a1 1 0 011-1zm0 10a1 1 0 011 1v1h1a1 1 0 110 2H6v1a1 1 0 11-2 0v-1H3a1 1 0 110-2h1v-1a1 1 0 011-1zM12 2a1 1 0 01.967.744L14.146 7.2 17.5 9.134a1 1 0 010 1.732l-3.354 1.935-1.18 4.455a1 1 0 01-1.933 0L9.854 12.8 6.5 10.866a1 1 0 010-1.732l3.354-1.935 1.18-4.455A1 1 0 0112 2z" clip-rule="evenodd"></path></svg>
+                    </div>
+                    <h3 class="text-2xl font-bold text-white mb-2">Unlock VIP Algorithm</h3>
+                    <p class="text-gray-400">Get access to our highly guarded 90%+ accuracy prediction model. Perfect for serious punters.</p>
+                </div>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-3 text-sm text-gray-300">
+                        <svg class="w-5 h-5 text-sporty-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Access to "Sure 2-Odds" daily
+                    </div>
+                    <div class="flex items-center gap-3 text-sm text-gray-300">
+                        <svg class="w-5 h-5 text-sporty-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Machine Learning exact score predictions
+                    </div>
+                    <div class="flex items-center gap-3 text-sm text-gray-300">
+                        <svg class="w-5 h-5 text-sporty-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                        Bankroll management strategy guide
+                    </div>
+                </div>
+                <button onclick="alert('This is a mockup. Payment gateway would integrate here.')" class="w-full mt-6 bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-black font-bold py-3 px-4 rounded-lg transition-all shadow-lg shadow-yellow-500/20">
+                    Upgrade to VIP - $19.99/mo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock data generators for realistic teams and leagues
+        const leagues = [
+            { name: 'Premier League', country: '🏴󠁧󠁢󠁥󠁮󠁧󠁿', topTeams: ['Arsenal', 'Man City', 'Liverpool', 'Aston Villa', 'Tottenham', 'Man United', 'Chelsea'] },
+            { name: 'La Liga', country: '🇪🇸', topTeams: ['Real Madrid', 'Barcelona', 'Atletico Madrid', 'Girona', 'Athletic Club'] },
+            { name: 'Serie A', country: '🇮🇹', topTeams: ['Inter Milan', 'Juventus', 'AC Milan', 'Roma', 'Napoli', 'Atalanta'] },
+            { name: 'Bundesliga', country: '🇩🇪', topTeams: ['Bayer Leverkusen', 'Bayern Munich', 'Stuttgart', 'Dortmund', 'RB Leipzig'] }
+        ];
+
+        const betTypes = ['1X2 (Home Win)', '1X2 (Away Win)', 'Over 2.5 Goals', 'Both Teams to Score (Yes)', 'Double Chance (1X)', 'Under 3.5 Goals'];
+
+        // Utility to generate a random number within a range
+        function randomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        // Utility to generate a random float within a range
+        function randomFloat(min, max, decimals = 2) {
+            const str = (Math.random() * (max - min) + min).toFixed(decimals);
+            return parseFloat(str);
+        }
+
+        function generateMockPredictions(count = 9) {
+            const predictions = [];
+            for (let i = 0; i < count; i++) {
+                // Select a random league
+                const league = leagues[randomInt(0, leagues.length - 1)];
+                
+                // Select two distinct teams
+                let homeTeam = league.topTeams[randomInt(0, league.topTeams.length - 1)];
+                let awayTeam = league.topTeams[randomInt(0, league.topTeams.length - 1)];
+                while (homeTeam === awayTeam) {
+                    awayTeam = league.topTeams[randomInt(0, league.topTeams.length - 1)];
+                }
+
+                // Generate mock probabilities (summing roughly to 100% for 1X2, or independent for O/U)
+                const isStrongFavorite = Math.random() > 0.5;
+                let prob;
+                let confidenceStr;
+                let confidenceColor;
+
+                if (isStrongFavorite) {
+                    prob = randomInt(75, 94); // High accuracy mock range
+                    confidenceStr = "High Confidence";
+                    confidenceColor = "text-sporty-green";
+                } else {
+                    prob = randomInt(55, 74);
+                    confidenceStr = "Medium Confidence";
+                    confidenceColor = "text-yellow-500";
+                }
+
+                // Calculate a realistic odd based on probability (inverse + bookmaker margin)
+                // e.g., 80% prob -> 1/0.8 = 1.25 fair odd. Actual odd might be 1.18
+                const fairOdd = 100 / prob;
+                const bookieOdd = (fairOdd * 0.95).toFixed(2); // 5% margin mock
+
+                const betType = betTypes[randomInt(0, betTypes.length - 1)];
+                
+                // Format time
+                const hour = randomInt(13, 21);
+                const min = Math.random() > 0.5 ? '00' : '30';
+                const matchTime = `Today, ${hour}:${min}`;
+
+                predictions.push({
+                    league: `${league.country} ${league.name}`,
+                    homeTeam,
+                    awayTeam,
+                    matchTime,
+                    prediction: betType,
+                    probability: prob,
+                    odds: bookieOdd,
+                    confidenceStr,
+                    confidenceColor
+                });
+            }
+            return predictions;
+        }
+
+        function renderPredictions(predictions) {
+            const grid = document.getElementById('predictionsGrid');
+            grid.innerHTML = ''; // Clear existing
+
+            predictions.forEach((pred, index) => {
+                // Determine color for the probability bar
+                let barColor = 'bg-yellow-500';
+                if (pred.probability >= 80) barColor = 'bg-sporty-green';
+                if (pred.probability < 60) barColor = 'bg-red-500';
+
+                const cardHTML = `
+                    <div class="prediction-card bg-sporty-gray border border-sporty-light rounded-xl overflow-hidden flex flex-col h-full" style="animation-delay: ${index * 50}ms">
+                        <!-- Card Header (League & Time) -->
+                        <div class="bg-sporty-light px-4 py-3 border-b border-gray-700 flex justify-between items-center">
+                            <span class="text-xs font-semibold text-gray-300 uppercase tracking-wider">${pred.league}</span>
+                            <span class="text-xs text-gray-400 bg-sporty-dark px-2 py-1 rounded flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                ${pred.matchTime}
+                            </span>
+                        </div>
+                        
+                        <!-- Teams -->
+                        <div class="p-5 flex-grow flex flex-col justify-center">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-bold text-lg text-white">${pred.homeTeam}</span>
+                                <span class="text-gray-500 font-mono text-sm px-2">vs</span>
+                                <span class="font-bold text-lg text-white text-right">${pred.awayTeam}</span>
+                            </div>
+                        </div>
+
+                        <!-- Prediction Details -->
+                        <div class="px-5 pb-5">
+                            <div class="bg-sporty-dark rounded-lg p-4 border border-gray-700">
+                                <div class="flex justify-between items-end mb-3">
+                                    <div>
+                                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Our Tip</p>
+                                        <p class="font-bold text-sporty-red text-lg">${pred.prediction}</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-xs text-gray-400 uppercase tracking-wide mb-1">Odds</p>
+                                        <p class="font-bold text-white text-xl">${pred.odds}</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Probability Bar -->
+                                <div class="mt-4">
+                                    <div class="flex justify-between text-xs mb-1">
+                                        <span class="${pred.confidenceColor} font-medium">${pred.confidenceStr}</span>
+                                        <span class="text-white font-bold">${pred.probability}%</span>
+                                    </div>
+                                    <div class="prob-bar-container">
+                                        <div class="prob-bar ${barColor}" style="width: 0%" data-target-width="${pred.probability}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button onclick="copyToClipboard('${pred.homeTeam} vs ${pred.awayTeam}: ${pred.prediction} @ ${pred.odds}')" class="w-full mt-4 flex items-center justify-center gap-2 bg-transparent border border-gray-600 hover:border-sporty-red hover:text-sporty-red text-gray-300 font-medium py-2 px-4 rounded transition-colors text-sm">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                Copy Tip
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', cardHTML);
+            });
+
+            // Animate probability bars after a short delay
+            setTimeout(() => {
+                const bars = document.querySelectorAll('.prob-bar');
+                bars.forEach(bar => {
+                    bar.style.width = bar.getAttribute('data-target-width');
+                });
+            }, 100);
+        }
+
+        function generateNewPredictions() {
+            const grid = document.getElementById('predictionsGrid');
+            const loader = document.getElementById('loadingState');
+            
+            grid.classList.add('hidden');
+            loader.classList.remove('hidden');
+            loader.classList.add('flex');
+
+            // Simulate API call delay
+            setTimeout(() => {
+                const newPreds = generateMockPredictions(9);
+                renderPredictions(newPreds);
+                
+                loader.classList.add('hidden');
+                loader.classList.remove('flex');
+                grid.classList.remove('hidden');
+            }, 1200);
+        }
+
+        function copyToClipboard(text) {
+            // Using older execCommand as fallback for iFrame compatibility as requested
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                // Could add a toast notification here instead of alert, but keeping it simple for now
+                const btn = event.currentTarget;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = `<svg class="w-4 h-4 text-sporty-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied!`;
+                btn.classList.replace('text-gray-300', 'text-sporty-green');
+                btn.classList.replace('hover:text-sporty-red', 'hover:text-sporty-green');
+                btn.classList.replace('hover:border-sporty-red', 'hover:border-sporty-green');
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.replace('text-sporty-green', 'text-gray-300');
+                    btn.classList.replace('hover:text-sporty-green', 'hover:text-sporty-red');
+                    btn.classList.replace('hover:border-sporty-green', 'hover:border-sporty-red');
+                }, 2000);
+            } catch (err) {
+                console.error('Failed to copy', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // Modal Functions
+        function showPremiumModal() {
+            const modal = document.getElementById('premiumModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Small timeout to allow display:block to apply before animating opacity
+            setTimeout(() => {
+                modal.querySelector('.modal-overlay').style.opacity = '1';
+                modal.querySelector('.bg-sporty-gray').style.transform = 'scale(1)';
+                modal.querySelector('.bg-sporty-gray').style.opacity = '1';
+            }, 10);
+        }
+
+        function closePremiumModal() {
+            const modal = document.getElementById('premiumModal');
+            modal.querySelector('.modal-overlay').style.opacity = '0';
+            modal.querySelector('.bg-sporty-gray').style.transform = 'scale(0.95)';
+            modal.querySelector('.bg-sporty-gray').style.opacity = '0';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200); // match transition duration
+        }
+
+        // Initial setup
+        window.onload = () => {
+            // Set initial state for modal animations
+            const modal = document.getElementById('premiumModal');
+            modal.querySelector('.modal-overlay').style.transition = 'opacity 0.2s ease-out';
+            modal.querySelector('.modal-overlay').style.opacity = '0';
+            modal.querySelector('.bg-sporty-gray').style.transition = 'all 0.2s ease-out';
+            modal.querySelector('.bg-sporty-gray').style.transform = 'scale(0.95)';
+            modal.querySelector('.bg-sporty-gray').style.opacity = '0';
+
+            // Generate initial predictions
+            const initialPreds = generateMockPredictions(6);
+            renderPredictions(initialPreds);
+        };
+    </script>
+</body>
+</html>
